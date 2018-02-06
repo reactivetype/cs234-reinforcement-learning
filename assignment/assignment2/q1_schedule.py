@@ -33,12 +33,9 @@ class LinearSchedule(object):
               self.epsilon should never go under self.eps_end
         """
         ##############################################################
-        ################ YOUR CODE HERE - 3-4 lines ################## 
-
-        pass
-
-        ##############################################################
-        ######################## END YOUR CODE ############## ########
+        ################ YOUR CODE HERE - 3-4 lines ##################
+        new_epsilon = self.eps_begin + 1.0 * (self.eps_end - self.eps_begin) * t / self.nsteps
+        self.epsilon = max(self.eps_end, new_epsilon)
 
 
 class LinearExploration(LinearSchedule):
@@ -76,11 +73,10 @@ class LinearExploration(LinearSchedule):
         """
         ##############################################################
         ################ YOUR CODE HERE - 4-5 lines ##################
-
-        pass
-
-        ##############################################################
-        ######################## END YOUR CODE #######################
+        if np.random.random() < self.epsilon:
+            return self.env.action_space.sample()
+        else:
+            return best_action
 
 
 
@@ -114,15 +110,23 @@ def test3():
     print("Test3: ok")
 
 
-def your_test():
+def test4():
     """
     Use this to implement your own tests
     """
-    pass
+    env = EnvTest((5,5,1))
+    exp_strat = LinearExploration(env, 0.9, 0.1, 100)
+    exp_strat.update(40)
+    assert np.isclose(exp_strat.epsilon, 0.580), "Test 4 failed, update incorrect"
+    assert exp_strat.get_action(3) <= env.action_space.n, "Test 4 failed, get_action incorrect"
+    print("Test4: ok")
+
+
+
 
 
 if __name__ == "__main__":
     test1()
     test2()
     test3()
-    your_test()
+    test4()

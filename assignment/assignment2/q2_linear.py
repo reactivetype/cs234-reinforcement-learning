@@ -54,8 +54,12 @@ class Linear(DQN):
         """
         ##############################################################
         ################YOUR CODE HERE (6-15 lines) ##################
-
-        pass
+        self.s = tf.placeholder(tf.uint8, shape = (None, state_shape[0], state_shape[1], state_shape[2] * self.config.state_history))
+        self.a = tf.placeholder(tf.int32, shape = (None, ))
+        self.r = tf.placeholder(tf.float32, shape = (None, ))
+        self.sp = tf.placeholder(tf.uint8, shape = (None, state_shape[0], state_shape[1], state_shape[2] * self.config.state_history))
+        self.done_mask = tf.placeholder(tf.bool, shape = (None, ))
+        self.lr = tf.placeholder(tf.float32, shape = ())
 
         ##############################################################
         ######################## END YOUR CODE #######################
@@ -76,7 +80,6 @@ class Linear(DQN):
         """
         # this information might be useful
         num_actions = self.env.action_space.n
-        out = state
 
         ##############################################################
         """
@@ -96,9 +99,15 @@ class Linear(DQN):
               lasagne, cafe, etc.)
         """
         ##############################################################
-        ################ YOUR CODE HERE - 2-3 lines ################## 
-        
-        pass
+        ################ YOUR CODE HERE - 2-3 lines ##################
+        with tf.variable_scope(scope, reuse) as _ :
+            flat_input = layers.flatten(state, scope = "Flatten")
+            out = layers.fully_connected(inputs = flat_input,
+                                        num_outputs=num_actions,
+                                        reuse = reuse,
+                                        scope = "Linear",
+                                        activation_fn = None)
+
 
         ##############################################################
         ######################## END YOUR CODE #######################
@@ -144,8 +153,11 @@ class Linear(DQN):
         """
         ##############################################################
         ################### YOUR CODE HERE - 5-10 lines #############
-        
-        pass
+        target_w = tf.get_collection(key = tf.GraphKeys.TRAINABLE_VARIABLES, scope = target_q_scope)
+        q_w = tf.get_collection(key = tf.GraphKeys.TRAINABLE_VARIABLES, scope = q_scope)
+        opAssigns = [tf.assign(target_w[i], q_w[i]) for i in range(len(q_w))]
+        self.update_target_op = tf.group(*opAssigns)
+
 
         ##############################################################
         ######################## END YOUR CODE #######################
@@ -186,8 +198,11 @@ class Linear(DQN):
         """
         ##############################################################
         ##################### YOUR CODE HERE - 4-5 lines #############
-
-        pass
+        not_done = 1 - tf.cast(self.done_mask, dtype = tf.float32, name = "not_done")
+        action_one_hot_indices = tf.one_hot(self.a, depth = num_actions)
+        Q_samp = self.r + not_done * self.config.gamma * tf.reduce_max(target_q, axis = 1)
+        Q = tf.reduce_sum(q * action_one_hot_indices, axis = 1)
+        self.loss = tf.reduce_mean((Q_samp - Q) ** 2)
 
         ##############################################################
         ######################## END YOUR CODE #######################
@@ -224,8 +239,24 @@ class Linear(DQN):
         ##############################################################
         #################### YOUR CODE HERE - 8-12 lines #############
 
-        pass
-        
+        # Get ADAM Optimizer
+        opt = tf.train.AdamOptimizer(learning_rate = self.lr)
+
+        # Compute gradients wrt trainable variables
+        vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
+        grad_v_pairs = opt.compute_gradients(loss = self.loss, var_list = vars)
+        grads, vs = list(zip(*grad_v_pairs))
+
+        # Clip the gradients by norm if self.config.grad is True
+        if self.config.grad_clip :
+            grads, _ = tf.clip_by_global_norm(grads, self.config.clip_val)
+
+        # Apply the gradients and store the train op in self.train_op
+        self.train_op = opt.apply_gradients(list(zip(grads, vs)))
+
+        # Compute and store global norm of gradients
+        self.grad_norm = tf.global_norm(grads)
+
         ##############################################################
         ######################## END YOUR CODE #######################
     
