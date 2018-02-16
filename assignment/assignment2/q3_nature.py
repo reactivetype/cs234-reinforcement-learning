@@ -31,12 +31,10 @@ class NatureQN(Linear):
         """
         # this information might be useful
         num_actions = self.env.action_space.n
-        out = state
         ##############################################################
         """
         TODO: implement the computation of Q values like in the paper
-                https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf
-                https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
+                 https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
 
               you may find the section "model architecture" of the appendix of the 
               nature paper particulary useful.
@@ -54,8 +52,28 @@ class NatureQN(Linear):
         """
         ##############################################################
         ################ YOUR CODE HERE - 10-15 lines ################ 
-
-        pass
+        with tf.variable_scope(scope, reuse):
+            conv1 = layers.conv2d(inputs = state, num_outputs = 32,
+                                  kernel_size = [8, 8], stride = 4,
+                                  activation_fn = tf.nn.relu,
+                                  reuse = reuse, scope = "Conv1")
+            conv2 = layers.conv2d(inputs = conv1, num_outputs = 64,
+                                  kernel_size = [4, 4], stride = 2,
+                                  activation_fn = tf.nn.relu,
+                                  reuse=reuse, scope = "Conv2")
+            conv3 = layers.conv2d(inputs=conv2, num_outputs=64,
+                                  kernel_size=[3, 3], stride=1,
+                                  activation_fn=tf.nn.relu,
+                                  reuse=reuse, scope="Conv3")
+            flattened = layers.flatten(conv3, scope = "flattened")
+            hidden_fc = layers.fully_connected(inputs = flattened,
+                                               num_outputs = 512,
+                                               activation_fn = tf.nn.relu,
+                                               reuse=reuse, scope = "hidden-fc")
+            out = layers.fully_connected(inputs = hidden_fc,
+                                         num_outputs = num_actions,
+                                         activation_fn = None,
+                                         reuse=reuse, scope = "output-Q")
 
         ##############################################################
         ######################## END YOUR CODE #######################
