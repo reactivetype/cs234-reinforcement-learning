@@ -1,0 +1,7 @@
+numpy
+tensorflow
+gym==0.7.4
+scipy
+matplotlib
+mujoco-py==0.5.7
+
